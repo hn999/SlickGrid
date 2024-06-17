@@ -343,6 +343,9 @@ export interface GridOption<C extends BaseColumn = BaseColumn> {
   /** Viewport max width in pixel */
   viewportMaxWidthPx?: number;
 
+  /** When scroll the table, the contents move by at least the height of single row. */
+  rowHeightScroll?: boolean;
+
   // --
   // deprecated options
 

@@ -290,7 +290,8 @@ export class SlickGrid<TData = any, C extends Column<TData> = Column<TData>, O e
     sanitizer: undefined,  // sanitize function, built in basic sanitizer is: Slick.RegexSanitizer(dirtyHtml)
     logSanitizedHtml: false, // log to console when sanitised - recommend true for testing of dev and production
     mixinDefaults: true,
-    shadowRoot: undefined
+    shadowRoot: undefined,
+    rowHeightScroll: false
   };
 
   protected _columnDefaults = {
@@ -3795,6 +3796,12 @@ export class SlickGrid<TData = any, C extends Column<TData> = Column<TData>, O e
 
     const oldOffset = this.offset;
     this.offset = Math.round(this.page * (this.cj || 0));
+
+    // Modify this.offset to multiple of rowHeight
+    if (this._options.rowHeightScroll! === true) {
+      this.offset = Math.round(this.offset / this._options.rowHeight!) * this._options.rowHeight!;
+    }
+
     this.page = Math.min((this.n || 0) - 1, Math.floor(y / (this.ph || 0)));
     const newScrollTop = (y - this.offset) as number;
 
@@ -4920,6 +4927,12 @@ export class SlickGrid<TData = any, C extends Column<TData> = Column<TData>, O e
   }
 
   protected handleScroll() {
+    // Modify scrollTop to multiple of rowHeight
+    if (this._options.rowHeightScroll! === true) {
+      const newScrollTop = Math.round(this._viewportScrollContainerY.scrollTop / this._options.rowHeight!) * this._options.rowHeight!;
+      this._viewportScrollContainerY.scrollTop = newScrollTop;
+    }
+    
     this.scrollTop = this._viewportScrollContainerY.scrollTop;
     this.scrollLeft = this._viewportScrollContainerX.scrollLeft;
     return this._handleScroll(false);
@@ -5006,6 +5019,12 @@ export class SlickGrid<TData = any, C extends Column<TData> = Column<TData>, O e
           this.page = Math.min(this.n - 1, Math.floor(this.scrollTop * ((this.th - this.viewportH) / (this.h - this.viewportH)) * (1 / this.ph)));
         }
         this.offset = Math.round(this.page * this.cj);
+
+        // Modify this.offset to multiple of rowHeight
+        if (this._options.rowHeightScroll! === true) {
+          this.offset = Math.round(this.offset / this._options.rowHeight!) * this._options.rowHeight!;
+        }
+
         if (oldOffset !== this.offset) {
           this.invalidateAllRows();
         }
@@ -5284,8 +5303,14 @@ export class SlickGrid<TData = any, C extends Column<TData> = Column<TData>, O e
   // Interactivity
 
   protected handleMouseWheel(e: MouseEvent, _delta: number, deltaX: number, deltaY: number) {
+    // Minimum deltaY is 1 and it must be integer
+    if (this._options.rowHeightScroll! === true) {
+      deltaY = Math.floor(deltaY + (deltaY < 0 ? -1 : 1));
+    }
+
     this.scrollTop = Math.max(0, this._viewportScrollContainerY.scrollTop - (deltaY * this._options.rowHeight!));
     this.scrollLeft = this._viewportScrollContainerX.scrollLeft + (deltaX * 10);
+
     const handled = this._handleScroll(true);
     if (handled) {
       e.preventDefault();
